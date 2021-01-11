@@ -1,10 +1,12 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This program takes a main text and a folder which contains multiple text files then compares it's similarities with
- * main text file. Prints the results.
+ * main text file. Finally, prints the results.
  */
 public class main {
 
@@ -48,6 +50,7 @@ public class main {
         int count = 1;
         for(File f: files) {
             printResults(f, Objects.requireNonNull(fileToList(mainFile)), count++);
+            System.out.println();
         }
     }
 
@@ -61,7 +64,7 @@ public class main {
         System.out.println("Give a path to the main file: ");
         String mainFilePath = in.nextLine();
         File mainFile = new File(mainFilePath);
-        while(!mainFile.exists() || !mainFilePath.substring(mainFilePath.length() - 3).equals("txt")) {
+        while(!mainFile.exists() || !mainFilePath.endsWith("txt")) {
             System.out.println("Given path either does not exists or not a txt file. Please give a valid one: " );
             mainFilePath = in.nextLine();
             mainFile = new File(mainFilePath);
@@ -89,27 +92,28 @@ public class main {
                 sum += s.getSimilarityRate();
             }
             System.out.println("Similarity rate is " + (sum / similarities.size()) + " with document " + count);
-            System.out.println("Most Similar sentence is " + similarities.get(0).getSentence() + " with similarity rate " + similarities.get(0).getSimilarityRate());
-            System.out.println("Second Most Similar Sentence " + similarities.get(1).getSentence() + " with similarity rate " + similarities.get(1).getSimilarityRate());
-            System.out.println("Third Most Similar Sentence " + similarities.get(2).getSentence() + " with similarity rate " + similarities.get(2).getSimilarityRate());
-            System.out.println("Fourth Most Similar Sentence " + similarities.get(3).getSentence() + " with similarity rate " + similarities.get(3).getSimilarityRate());
-            System.out.println("Fifth Most Similar Sentence " + similarities.get(4).getSentence() + " with similarity rate " + similarities.get(4).getSimilarityRate());
+            String[] sentences = {"Most Similar sentence is ", "Second Most similar sentence ", "Third Most Similar Sentence ", "Fourth most similar sentence ", "Fifth most similar sentence. "};
+            for (int i = 0; i < similarities.size(); i++) {
+                System.out.println(sentences[i] + similarities.get(i).getSentence() + " with similarity rate " + similarities.get(i).getSimilarityRate());
+                if(i == 4)
+                    break;
+            }
     }
     /**
      *
-     * @param s,  is a sentence in main document to compare
-     * @param se, is a document where it consists a lot of sentences, article
+     * @param mainDocumentSentence,  is a sentence in main document to compare
+     * @param otherDocumentSentences, is a document where it consists a lot of sentences, article
      * @param similarities, Similarity array
      */
-    static void findSimilarites(List<String> s, ArrayList<List<String>> se, List<Similarity> similarities) {
+    static void findSimilarites(List<String> mainDocumentSentence, ArrayList<List<String>> otherDocumentSentences, List<Similarity> similarities) {
         double max = 0;
-        for(List<String> secondSentence: se) {
-            double count = countHowManySameWord(s, secondSentence);
+        for(List<String> secondSentence: otherDocumentSentences) {
+            double count = countHowManySameWord(mainDocumentSentence, secondSentence);
             if(count > max)
                 max = count;
         }
         StringBuilder sentence = new StringBuilder();
-        for(String word: s)
+        for(String word: mainDocumentSentence)
             sentence.append(word).append(" ");
         similarities.add(new Similarity(sentence.toString(), max));
     }
@@ -144,15 +148,16 @@ public class main {
      * @return double dimension array list where each column is an ArrayList string.
      */
     static ArrayList<List<String>> fileToList(File fileEntry) {
-        ArrayList<List<String>> fileList = new ArrayList<List<String>>();
+        ArrayList<List<String>> fileList = new ArrayList<>();
         try {
             Scanner reader = new Scanner(fileEntry);
             while(reader.hasNextLine()) {
                 String data = reader.nextLine();
                 if(!data.isEmpty()) {
-                    String[] sentences = data.split("\\.");
-                    for (String sentence : sentences) {
-                        String[] sentencesWord = sentence.split(" ");
+                    Pattern re = Pattern.compile("[^.!?\\s][^.!?]*(?:[.!?](?!['\"]?\\s|$)[^.!?]*)*[.!?]?['\"]?(?=\\s|$)", Pattern.MULTILINE | Pattern.COMMENTS);
+                    Matcher reMatcher = re.matcher(data);
+                    while(reMatcher.find()) {
+                        String[] sentencesWord = reMatcher.group().split(" ");
                         List<String> sentencesWordList = Arrays.asList(sentencesWord);
                         fileList.add(sentencesWordList);
                     }
